@@ -1,4 +1,5 @@
 
+
 package com.jarvis.telugu
 
 import android.app.Activity
@@ -18,9 +19,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private lateinit var status: TextView
     private lateinit var tts: TextToSpeech
+    private var ttsReady = false
 
     private val micPermission =
         android.Manifest.permission.RECORD_AUDIO
+
+    private val englishLocale = Locale("en", "IN")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,13 +38,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         layout.setBackgroundColor(Color.rgb(10, 20, 40))
 
         val title = TextView(this)
-        title.text = "JARVIS TELUGU"
+        title.text = "JARVIS AI"
         title.textSize = 30f
         title.setTextColor(Color.CYAN)
         title.gravity = Gravity.CENTER
 
         status = TextView(this)
-        status.text = "Hello! I am Jarvis."
+        status.text = "Hello! I am Jarvis, your AI assistant."
         status.textSize = 20f
         status.setTextColor(Color.WHITE)
         status.gravity = Gravity.CENTER
@@ -79,18 +83,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             intent.putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE,
-                "te-IN"
+                "en-IN"
             )
 
             intent.putExtra(
                 RecognizerIntent.EXTRA_PROMPT,
-                "Speak to Jarvis"
+                "Please speak in English"
             )
 
             startActivityForResult(intent, 102)
 
         } catch (e: Exception) {
-            status.text = "Speech recognition unavailable"
+            status.text = "Speech recognition is unavailable."
         }
     }
 
@@ -109,7 +113,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         ) {
             startListening()
         } else {
-            status.text = "Microphone permission required"
+            status.text = "Microphone permission is required."
         }
     }
 
@@ -127,32 +131,43 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             val spokenText = results?.firstOrNull() ?: ""
 
-            status.text = "You: $spokenText"
-
             if (spokenText.isNotBlank()) {
                 val reply =
-                    "Hello! I heard you. You said $spokenText"
+                    "Hello! I heard you. You said: $spokenText"
 
                 status.text =
                     "You: $spokenText\n\nJarvis: $reply"
 
                 speak(reply)
+            } else {
+                status.text = "Sorry, I could not understand. Please try again."
             }
         }
     }
 
     private fun speak(message: String) {
-        tts.speak(
-            message,
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            "jarvis_reply"
-        )
+        if (ttsReady) {
+            tts.speak(
+                message,
+                TextToSpeech.QUEUE_FLUSH,
+                null,
+                "jarvis_reply"
+            )
+        }
     }
 
     override fun onInit(statusCode: Int) {
         if (statusCode == TextToSpeech.SUCCESS) {
-            tts.language = Locale("en", "IN")
+            val result = tts.setLanguage(englishLocale)
+
+            ttsReady = result != TextToSpeech.LANG_MISSING_DATA &&
+                result != TextToSpeech.LANG_NOT_SUPPORTED
+
+            if (ttsReady) {
+                speak("Hello! I am Jarvis. How can I help you?")
+            } else {
+                status.text = "Please install an English TTS voice."
+            }
         }
     }
 
